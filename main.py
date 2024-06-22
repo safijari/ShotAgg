@@ -4,6 +4,7 @@ from click import get_app_dir
 import decky_plugin
 from settings import SettingsManager
 from pathlib import Path
+import datetime
 import json
 import os
 import subprocess
