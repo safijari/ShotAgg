@@ -3,8 +3,7 @@ import os
 from click import get_app_dir
 import decky_plugin
 from settings import SettingsManager
-from pathlib import Path
-import datetime
+from pathlib import PurePosixPath
 import json
 import os
 import subprocess
@@ -90,7 +89,7 @@ class Plugin:
             for f in files:
                 path = Plugin.make_path(self, app_id, fname)
                 os.link(f, path)
-                if _settings.getSetting("copy_most_recent", True):
+                if Plugin._settings.getSetting("copy_most_recent", True):
                     most_recent_path = self._dump_folder / "most_recent.jpg"
                     if most_recent_path.exists():
                         most_recent_path.unlink()
@@ -141,25 +140,14 @@ class Plugin:
                 return name
 
     def make_path(self, app_id, fname):
-        if _settings.getSetting("folder_per_game", True):
+        if Plugin._settings.getSetting("folder_per_game", True):
             app_name = Plugin.get_app_name(self, app_id) or str(app_id)
             final_dir = self._dump_folder / app_name.replace(":", " ")
         else:
             final_dir = self._dump_folder
-
-        if timestamp_format := _settings.getSetting("timestamp_format"):
-            final_name = Path(datetime.now().strftime(timestamp_format))
-        else:
-            final_name = Path(fname)
-
-        final_path = final_dir / final_name
-        dup_name_count = 1
-        while final_path.exists():
-            final_path = final_dir / f"{final_name.stem}_{dup_name_count}.{final_name.suffix}"
-            dup_name_count += 1
-
         final_dir.mkdir(parents=True, exist_ok=True)
-        return final_path
+
+        return final_dir / fname
 
     async def _main(self):
         try:
