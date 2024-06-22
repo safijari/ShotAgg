@@ -149,6 +149,12 @@ class Plugin:
 
         return final_dir / fname
 
+    def get_settings(self):
+        return self._settings.settings
+
+    def set_setting(self, key, value):
+        self._settings.setSetting(key, value)
+
     async def _main(self):
         try:
             loop = asyncio.get_event_loop()
