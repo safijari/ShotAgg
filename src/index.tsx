@@ -1,36 +1,45 @@
 import {
   ButtonItem,
   definePlugin,
-  DialogButton,
-  Menu,
-  MenuItem,
   PanelSection,
   PanelSectionRow,
   Router,
   ServerAPI,
-  showContextMenu,
   staticClasses,
+  ToggleField,
 } from "decky-frontend-lib";
 import { VFC, useState } from "react";
 import { HiOutlineCamera } from "react-icons/hi";
-import logo from "../assets/logo.png";
+import { Settings } from "./settings";
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({ serverAPI }) => {
   const [buttonEnabled, setButtonEnabled] = useState<boolean>(true);
   const [feedbackText, setFeedbackText] = useState<string>("");
+  const [copyMostRecent, setCopyMostRecent] = useState<boolean>(Settings.data.copy_most_recent);
+  const [folderPerGame, setFolderPerGame] = useState<boolean>(Settings.data.folder_per_game);
 
-  const onClick = async () => {
+  const onClickAggragateButton = async () => {
     setButtonEnabled(false);
     setFeedbackText("Aggregating...");
     let store: any = window.appStore;
-    const result = await serverAPI.callPluginMethod(
+    const result = await serverAPI.callPluginMethod<{}, number>(
       "aggregate_all", { allapps: store.allApps.map((i: any) => [i.appid, i.display_name])});
-    if (result.result >= 0) {
+    if (result.success && result.result >= 0) {
       setFeedbackText("Copied " + result.result + " files");
     } else {
       setFeedbackText("Something went wrong during aggregation. Please check logs.");
     }
     setButtonEnabled(true);
+  };
+
+  const onToggleCopyMostRecent = async (e: boolean) => {
+    setCopyMostRecent(e);
+    await Settings.setSetting("copy_most_recent", e);
+  };
+
+  const onToggleFolderPerGame = async (e: boolean) => {
+    setFolderPerGame(e);
+    await Settings.setSetting("folder_per_game", e);
   };
 
   console.log("router");
@@ -39,10 +48,16 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({ serverAPI }) => {
   return (
     <PanelSection title="Panel Section">
       <PanelSectionRow>
-        <ButtonItem layout="below" onClick={onClick} disabled={!buttonEnabled}>Aggregate!</ButtonItem>
+        <ButtonItem layout="below" onClick={onClickAggragateButton} disabled={!buttonEnabled}>Aggregate!</ButtonItem>
       </PanelSectionRow>
       <PanelSectionRow>
         <div>{feedbackText}</div>
+      </PanelSectionRow>
+      <PanelSectionRow>
+        <ToggleField label="Copy Most Recent" checked={copyMostRecent} onChange={onToggleCopyMostRecent}/>
+      </PanelSectionRow>
+      <PanelSectionRow>
+        <ToggleField label="Folder Per Game" checked={folderPerGame} onChange={onToggleFolderPerGame}/>
       </PanelSectionRow>
     </PanelSection>
   );
@@ -50,12 +65,13 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({ serverAPI }) => {
 
 export default definePlugin((serverApi: ServerAPI) => {
   let store: any = window.appStore;
+  Settings.init(serverApi);
   serverApi.callPluginMethod("set_id_map_fronend", {allapps: store.allApps.map((i: any) => [i.appid, i.display_name])});
   let screenshot_register = window.SteamClient.GameSessions.RegisterForScreenshotNotification(async (data: any) => {
     console.log(data);
     let res = await serverApi.callPluginMethod("copy_screenshot", { app_id: data.unAppID, url: data.details.strUrl});
     if (!res.result) {
-      await serverApi.toaster.toast({
+      serverApi.toaster.toast({
         title: "Shotty",
         body: "Failed to symlink screenshot",
         duration: 1000,

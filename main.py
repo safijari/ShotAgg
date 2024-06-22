@@ -2,6 +2,7 @@ import os
 
 from click import get_app_dir
 import decky_plugin
+from settings import SettingsManager
 from pathlib import Path
 import json
 import os
@@ -21,6 +22,8 @@ class Plugin:
     _rescuer_task = None
     _current_app_name = "Unknown"
     _rescued = False
+    _settings = SettingsManager(name="settings", settings_directory=decky_plugin.DECKY_PLUGIN_SETTINGS_DIR)
+    _settings.read()
 
     async def screenshot_rescuer(self):
         png_path = "/tmp/gamescope.raw_encoded.png"
@@ -86,10 +89,11 @@ class Plugin:
             for f in files:
                 path = Plugin.make_path(self, app_id, fname)
                 os.link(f, path)
-                most_recent_path = self._dump_folder / "most_recent.jpg"
-                if most_recent_path.exists():
-                    most_recent_path.unlink()
-                os.link(f, most_recent_path)
+                if Plugin._settings.getSetting("copy_most_recent", True):
+                    most_recent_path = self._dump_folder / "most_recent.jpg"
+                    if most_recent_path.exists():
+                        most_recent_path.unlink()
+                    os.link(f, most_recent_path)
                 decky_plugin.logger.info(f"Copied {f} to {path}")
                 did = True
             return did
@@ -136,10 +140,20 @@ class Plugin:
                 return name
 
     def make_path(self, app_id, fname):
-        app_name = Plugin.get_app_name(self, app_id) or str(app_id)
-        final_path = self._dump_folder / app_name.replace(":", " ") / fname
-        final_path.parent.mkdir(parents=True, exist_ok=True)
-        return final_path
+        if Plugin._settings.getSetting("folder_per_game", True):
+            app_name = Plugin.get_app_name(self, app_id) or str(app_id)
+            final_dir = self._dump_folder / app_name.replace(":", " ")
+        else:
+            final_dir = self._dump_folder
+        final_dir.mkdir(parents=True, exist_ok=True)
+
+        return final_dir / fname
+
+    def get_settings(self):
+        return self._settings.settings
+
+    def set_setting(self, key, value):
+        self._settings.setSetting(key, value)
 
     async def _main(self):
         try:
