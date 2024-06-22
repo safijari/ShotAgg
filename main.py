@@ -148,14 +148,14 @@ class Plugin:
             final_dir = self._dump_folder
 
         if timestamp_format := _settings.getSetting("timestamp_format"):
-            final_name = datetime.now().strftime(timestamp_format)
+            final_name = Path(datetime.now().strftime(timestamp_format))
         else:
-            final_name = fname
+            final_name = Path(fname)
 
         final_path = final_dir / final_name
         dup_name_count = 1
         while final_path.exists():
-            final_path = final_dir / f"{final_name}_{dup_name_count}"
+            final_path = final_dir / f"{final_name.stem}_{dup_name_count}.{final_name.suffix}"
             dup_name_count += 1
 
         final_dir.mkdir(parents=True, exist_ok=True)
