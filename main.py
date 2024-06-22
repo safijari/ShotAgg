@@ -3,7 +3,7 @@ import os
 from click import get_app_dir
 import decky_plugin
 from settings import SettingsManager
-from pathlib import PurePosixPath
+from pathlib import Path
 import json
 import os
 import subprocess
